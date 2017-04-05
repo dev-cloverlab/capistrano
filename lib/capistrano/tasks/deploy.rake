@@ -100,9 +100,9 @@ namespace :deploy do
     desc "Symlink release to current"
     task :release do
       on release_roles :all do
-        tmp_current_path = rails_root_release.parent.join(rails_root_current.basename)
+        tmp_current_path = rails_root_release.parent.join(current_path.basename)
         execute :ln, "-s", rails_root_release, tmp_current_path
-        execute :mv, tmp_current_path, rails_root_current.parent
+        execute :mv, tmp_current_path, current_path.parent
       end
     end
 
@@ -171,7 +171,7 @@ namespace :deploy do
     on release_roles(:all) do
       last_release = capture(:ls, "-xt", releases_path).split.first
       last_release_path = releases_path.join(last_release)
-      if test "[ `readlink #{rails_root_current}` != #{last_release_path} ]"
+      if test "[ `readlink #{current_path}` != #{last_release_path} ]"
         execute :tar, "-czf",
                 deploy_path.join("rolled-back-release-#{last_release}.tar.gz"),
                 last_release_path
@@ -252,12 +252,12 @@ namespace :deploy do
     end
   end
 
-  def rails_root_current
-    if fetch(:rails_root)
-      current_path.join(fetch(:rails_root))
-    else
-      current_path
-    end
-  end
+  # def rails_root_current
+  #   if fetch(:rails_root)
+  #     current_path.join(fetch(:rails_root))
+  #   else
+  #     current_path
+  #   end
+  # end
 
 end
