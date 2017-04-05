@@ -100,9 +100,9 @@ namespace :deploy do
     desc "Symlink release to current"
     task :release do
       on release_roles :all do
-        tmp_current_path = release_path.parent.join(current_path.basename)
-        execute :ln, "-s", release_path, tmp_current_path
-        execute :mv, tmp_current_path, current_path.parent
+        tmp_current_path = rails_root_release.parent.join(rails_root_current.basename)
+        execute :ln, "-s", rails_root_release, tmp_current_path
+        execute :mv, tmp_current_path, rails_root_current.parent
       end
     end
 
@@ -116,10 +116,10 @@ namespace :deploy do
     task :linked_dirs do
       next unless any? :linked_dirs
       on release_roles :all do
-        execute :mkdir, "-p", linked_dir_parents(release_path)
+        execute :mkdir, "-p", linked_dir_parents(rails_root_release)
 
         fetch(:linked_dirs).each do |dir|
-          target = release_path.join(dir)
+          target = rails_root_release.join(dir)
           source = shared_path.join(dir)
           next if test "[ -L #{target} ]"
           execute :rm, "-rf", target if test "[ -d #{target} ]"
@@ -132,10 +132,10 @@ namespace :deploy do
     task :linked_files do
       next unless any? :linked_files
       on release_roles :all do
-        execute :mkdir, "-p", linked_file_dirs(release_path)
+        execute :mkdir, "-p", linked_file_dirs(rails_root_release)
 
         fetch(:linked_files).each do |file|
-          target = release_path.join(file)
+          target = rails_root_release.join(file)
           source = shared_path.join(file)
           next if test "[ -L #{target} ]"
           execute :rm, target if test "[ -f #{target} ]"
@@ -171,7 +171,7 @@ namespace :deploy do
     on release_roles(:all) do
       last_release = capture(:ls, "-xt", releases_path).split.first
       last_release_path = releases_path.join(last_release)
-      if test "[ `readlink #{current_path}` != #{last_release_path} ]"
+      if test "[ `readlink #{rails_root_current}` != #{last_release_path} ]"
         execute :tar, "-czf",
                 deploy_path.join("rolled-back-release-#{last_release}.tar.gz"),
                 last_release_path
@@ -226,7 +226,7 @@ namespace :deploy do
   desc "Place a REVISION file with the current revision SHA in the current release path"
   task :set_current_revision  do
     on release_roles(:all) do
-      within release_path do
+      within rails_root_release do
         execute :echo, "\"#{fetch(:current_revision)}\" >> REVISION"
       end
     end
@@ -234,7 +234,7 @@ namespace :deploy do
 
   task :set_previous_revision do
     on release_roles(:all) do
-      target = release_path.join("REVISION")
+      target = rails_root_release.join("REVISION")
       if test "[ -f #{target} ]"
         set(:previous_revision, capture(:cat, target, "2>/dev/null"))
       end
@@ -243,4 +243,21 @@ namespace :deploy do
 
   task :restart
   task :failed
+
+  def rails_root_release
+    if fetch(:rails_root)
+      release_path.join(fetch(:rails_root))
+    else
+      release_path
+    end
+  end
+
+  def rails_root_current
+    if fetch(:rails_root)
+      rails_root_current.join(fetch(:rails_root))
+    else
+      current_path
+    end
+  end
+
 end
